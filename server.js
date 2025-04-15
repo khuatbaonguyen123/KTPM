@@ -1,33 +1,55 @@
-import express from 'express';
-import bodyParser from 'body-parser';
-import path from 'path';
-
-import lib from './utils.js';
-import http from 'http';
-import {Server, Socket} from 'socket.io';
-import {fileURLToPath} from 'url';
-
-const port = 8080;
-
-// Get the directory name
-const __fileName = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__fileName);
-console.log(__fileName);
+const express = require('express');
+const bodyParser = require('body-parser');
+const path = require('path');
+const WebSocket = require('ws')
+const lib = require('./utils');
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
+const port = 8080;
 
-// setup static folder
-app.use(express.static(path.join(__dirname, 'public')));
+class PubSub {
+    constructor() {
+      this.subscribers = new Map();
+    }
+  
+    subscribe(key, ws) {
+      if (!this.subscribers.has(key)) {
+        this.subscribers.set(key, new Set());
+      }
+      this.subscribers.get(key).add(ws);
+    }
+  
+    unsubscribe(key, ws) {
+      if (this.subscribers.has(key)) {
+        this.subscribers.get(key).delete(ws);
+        if (this.subscribers.get(key).size === 0) {
+          this.subscribers.delete(key);
+        }
+      }
+    }
+  
+    publish(key, value) {
+      if (this.subscribers.has(key)) {
+        this.subscribers.get(key).forEach(ws => {
+          if (ws.isAlive) {
+            ws.send(JSON.stringify({ key, value }));
+          }
+        });
+      }
+    }
+  }
+
 app.use(bodyParser.json());
+
+const store = new Map();
+const pubsub = new PubSub();
 
 app.post('/add', async (req, res) => {
     try {
         const { key, value } = req.body;
-        await lib.write(key, value);
-        io.emit('valueUpdated', { key, value });  // Emit to all connected clients
-        res.send("Insert a new record successfully!");
+        store.set(key, value);
+        pubsub.publish(key, value);
+        res.send('Insert a new record successfully');
     } catch (err) {
         res.send(err.toString());
     }
@@ -43,22 +65,34 @@ app.get('/get/:id', async (req, res) => {
     }
 });
 
+
 app.get('/viewer/:id', (req, res) => {
     const id = req.params.id;
-    res.sendFile(path.join(__dirname, 'public', 'viewer.html'));
+    res.sendFile(path.join(__dirname, "viewer.html"));
 });
 
-// Socket.IO event listener for connections
-io.on('connection', (socket) => {
-    console.log('A client connected');
+const wss = new WebSocket.Server({ port: 8081 });
 
-    // Here you can emit a value to the client upon connection
-    socket.emit('connected');
+wss.on('connection', (ws, req) => {
+  ws.isAlive = true;
 
-    // Handle disconnection
-    socket.on('disconnect', () => {
-        console.log('A client disconnected');
-    });
+  const urlParams = new URLSearchParams(req.url.split('?')[1] || '');
+  const key = urlParams.get('key');
+
+  if (key) {
+    pubsub.subscribe(key, ws);
+
+    if (store.has(key)) {
+      ws.send(JSON.stringify({ key, value: store.get(key) }));
+    }
+  }
+
+  ws.on('close', () => {
+    ws.isAlive = false;
+    if (key) pubsub.unsubscribe(key, ws);
+  });
+
+  ws.on('error', console.error);
 });
 
 app.listen(port, () => {

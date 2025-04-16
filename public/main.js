@@ -1,31 +1,56 @@
-const value = document.querySelector('#value');
-const socket = io();
+// Get elements by ID
+const dayInput = document.querySelector('#day');
+const getGoldValuesButton = document.querySelector('#get-gold-values-button');
+const goldTableBody = document.querySelector('#gold-table-body');
 
-// Extract the key from the URL path
-const locationPath = window.location.pathname.split("/");
-const key = locationPath[locationPath.length - 1];
+// Set up WebSocket connection
+const socket = io("http://localhost:8080");
 
-// Function to fetch the value associated with the key from the server
-async function fetchValue() {
+// Fetch and display gold values based on the day
+async function showGoldValues() {
+    const day = dayInput.value;
+
+    if (!day) {
+        alert('Please enter a day!');
+        return;
+    }
+
     try {
-        const response = await fetch(`/get/${key}`);
-        if (response.ok) {
-            const data = await response.text();
-            value.innerText = data;
-        } else {
-            console.error('Failed to fetch value');
+        console.log('Fetching for day:', day);
+
+        const response = await fetch(`/gold-values?day=${day}`);
+
+        if (!response.ok) {
+            throw new Error('Failed to fetch gold values');
         }
+
+        const data = await response.json();
+        goldTableBody.innerHTML = '';
+
+        data.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${item.updated_at}</td>
+                <td>${item.gold_type_name}</td>
+                <td>${item.buy_value}</td>
+                <td>${item.sell_value}</td>
+            `;
+            goldTableBody.appendChild(row);
+        });
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error fetching gold values', error);
     }
 }
 
-// Fetch value initially and then at regular intervals
-fetchValue();
+// Listen for gold value updates from the server
+socket.on("gold_value_updated", (data) => {
+    console.log('Gold value updated:', data);
+    alert('Gold value has been updated!');
+    showGoldValues(); // Refresh the data when updated via WebSocket
+});
 
-// Listen for real-time updates
-socket.on('valueUpdated', (data) => {
-    if (data.key === key) {
-        valueElement.innerText = data.value;  // Update the displayed value if the key matches
-    }
+// Event listeners
+getGoldValuesButton.addEventListener('click', () => {
+  console.log('Button clicked!'); // Thêm dòng này để test
+  showGoldValues();
 });

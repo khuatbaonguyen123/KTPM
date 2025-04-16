@@ -1,188 +1,92 @@
 import { GoldValue, GoldType } from '../models/index.js';
 import sequelize from '../database.js'; 
-import { QueryTypes } from 'sequelize';
+import { getIO } from '../socket.js';
 
-export const createGoldValue = async (req, res) => {
+export const upsertGoldValue = async (req, res) => {
+  const { day, gold_type_name, buy_value, sell_value } = req.body;
+
+  if (!day || !gold_type_name) {
+    return res.status(400).json({ error: 'Day and gold type name are required.' });
+  }
+
   try {
-    const { sell_value, buy_value, day, gold_type_name } = req.body;
-
-    if (!sell_value || !buy_value || !day || !gold_type_name) {
-      return res.status(400).json({ error: 'All fields are required' });
-    }
-
     const goldType = await GoldType.findOne({ where: { name: gold_type_name } });
 
     if (!goldType) {
-      return res.status(404).json({ error: 'Gold type not found' });
+      return res.status(404).json({ error: `Gold type '${gold_type_name}' not found.` });
     }
 
-    const newGoldValue = await GoldValue.create({
-      sell_value,
-      buy_value,
+    const [record, created] = await GoldValue.upsert({
       day,
       gold_type_id: goldType.id,
+      buy_value,
+      sell_value,
       updated_at: new Date()
+    }, {
+      returning: true
     });
 
-    res.status(201).json(newGoldValue);
-  } catch (error) {
-    console.error('Create Gold Value Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    // Emit the change to all clients
+    const io = getIO();
+    io.emit("gold_value_updated", record);
+
+    res.status(created ? 201 : 200).json({
+      message: created ? 'Created new gold value.' : 'Updated existing gold value.',
+      data: record
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
-// Get all gold values, optionally filtered by day and gold_type_name
-export const getAllGoldValues = async (req, res) => {
-  try {
-    const { day, gold_type_name } = req.query;
+export const getGoldValuesByDay = async (req, res) => {
+  const { day } = req.query;
 
-    // Construct the where clause for optional filters
-    const where = {};
-    if (day) {
-      where.day = day; // Filter by day if provided
-    }
-    if (gold_type_name) {
-      const goldType = await GoldType.findOne({ where: { name: gold_type_name } });
-      if (!goldType) return res.status(404).json({ error: 'Gold type not found' });
-      where.gold_type_id = goldType.id; // Filter by gold type name if provided
-    }
-
-    const values = await GoldValue.findAll({ where });
-    res.json(values);
-  } catch (error) {
-    console.error('Get All Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  if (!day) {
+    return res.status(400).json({ error: 'Missing required query parameter: day' });
   }
-};
 
-// Get the latest gold value by gold type name
-export const getLatestGoldValueByTypeName = async (req, res) => {
   try {
-    const { gold_type_name } = req.query;
-
-    if (!gold_type_name) {
-      return res.status(400).json({ error: 'Gold type name is required' });
-    }
-
-    const goldType = await GoldType.findOne({ where: { name: gold_type_name } });
-
-    if (!goldType) {
-      return res.status(404).json({ error: 'Gold type not found' });
-    }
-
-    const latestValue = await GoldValue.findOne({
-      where: { gold_type_id: goldType.id },
-      order: [['day', 'DESC']],
-    });
-
-    if (!latestValue) {
-      return res.status(404).json({ error: 'No values found for this gold type' });
-    }
-
-    res.json({
-      gold_type: gold_type_name,
-      sell_value: latestValue.sell_value,
-      buy_value: latestValue.buy_value,
-      day: latestValue.day,
-      last_updated: latestValue.updated_at,
-    });
-  } catch (error) {
-    console.error('Error fetching latest gold value:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
-
-export const getLatestGoldValueForAllTypesByDay = async (req, res) => {
-  try {
-    const { day } = req.query;
-
-    if (!day) {
-      return res.status(400).json({ error: 'Day is required (YYYY-MM-DD)' });
-    }
-
     const results = await sequelize.query(
       `
-      SELECT gv.gold_type_id, gt.name AS gold_type_name, gv.sell_value, gv.buy_value, gv.day, gv.updated_at AS last_updated
-      FROM gold_values gv
-      JOIN gold_types gt ON gv.gold_type_id = gt.id
+      SELECT 
+        gt.name AS gold_type_name,
+        gv.buy_value,
+        gv.sell_value,
+        gv.updated_at
+      FROM gold_value gv
+      JOIN gold_type gt ON gv.gold_type_id = gt.id
       WHERE gv.day = :day
-      AND gv.updated_at = (
-        SELECT MAX(updated_at)
-        FROM gold_values
-        WHERE gold_type_id = gv.gold_type_id AND day = :day
-      )
       `,
       {
         replacements: { day },
-        type: QueryTypes.SELECT,
+        type: sequelize.QueryTypes.SELECT
       }
     );
 
-    if (!results || results.length === 0) {
-      return res.status(404).json({ error: 'No gold values found for the specified day' });
-    }
-
     res.json(results);
-  } catch (error) {
-    console.error('Error fetching latest gold values for all types:', error);
-    res.status(500).json({ error: 'Internal server error' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
 };
 
-
-export const updateGoldValue = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { sell_value, buy_value, day, gold_type_name } = req.body;
-
-    const goldValue = await GoldValue.findByPk(id);
-    if (!goldValue) {
-      return res.status(404).json({ error: 'Gold value not found' });
-    }
-
-    let gold_type_id = goldValue.gold_type_id;
-
-    if (gold_type_name) {
-      let goldType = await GoldType.findOne({ where: { name: gold_type_name } });
-
-      // If gold type doesn't exist, create a new one
-      if (!goldType) {
-        goldType = await GoldType.create({ name: gold_type_name });
-      }
-
-      gold_type_id = goldType.id;
-    }
-
-    await goldValue.update({
-      sell_value: sell_value ?? goldValue.sell_value,
-      buy_value: buy_value ?? goldValue.buy_value,
-      day: day ?? goldValue.day,
-      gold_type_id,
-      updated_at: new Date()
-    });
-
-    res.json(goldValue);
-  } catch (error) {
-    console.error('Update Error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+export const getAllGoldValues = async (req, res) => {
+  const values = await GoldValue.findAll();
+  res.json(values);
 };
 
-  
+export const getGoldValueById = async (req, res) => {
+  const { id } = req.params;
+  const value = await GoldValue.findByPk(id);
+  value ? res.json(value) : res.status(404).json({ error: 'Not found' });
+};
+
 export const deleteGoldValue = async (req, res) => {
-    try {
-      const { id } = req.params;
-  
-      const goldValue = await GoldValue.findByPk(id);
-      if (!goldValue) {
-        return res.status(404).json({ error: 'Gold value not found' });
-      }
-  
-      await goldValue.destroy();
-      res.json({ message: 'Gold value deleted successfully' });
-    } catch (error) {
-      console.error('Delete Error:', error);
-      res.status(500).json({ error: 'Internal server error' });
-    }
-  };
-  
+  const { id } = req.params;
+  try {
+    await GoldValue.destroy({ where: { id } });
+    res.json({ message: 'Deleted' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

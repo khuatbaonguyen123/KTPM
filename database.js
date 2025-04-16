@@ -1,17 +1,18 @@
-import { createPool } from "mysql2";
+import { Sequelize } from "sequelize";
 
-const db = createPool({
-  connectionLimit: 10,
-  host: "localhost",
-  user: "root",
-  port: 3306,
-  password: "root", /// thay doi password
-  database: "gold_price", // ghi ten database cua minh vao
+const sequelize = new Sequelize('gold_price_2', 'root', 'password', {
+  host: 'localhost',
+  dialect: 'mysql'
 });
 
-db.getConnection((err) => {
-  if (!err) console.log("Connect successfully");
-  else console.log(err);
-});
+// Function to check the database connection
+export async function checkDatabaseConnection() {
+  try {
+    await sequelize.authenticate();
+    console.log('Connection has been established successfully.');
+  } catch (error) {
+    console.error('Unable to connect to the database:', error);
+  }
+}
 
-export default db;
+export default sequelize;

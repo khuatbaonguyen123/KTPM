@@ -1,14 +1,14 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import path from 'path';
-import {checkDatabaseConnection} from './database.js';
-import goldTypes from './routes/goldTypes.js';
-import goldValues from './routes/goldValues.js';
+import {checkDatabaseConnection} from './config/database.js';
 
-// import lib from './utils.js';
 import http from 'http';
-import { initSocket } from './socket.js';
+import { initSocket } from './config/socket.js';
 import {fileURLToPath} from 'url';
+import gold from './routes/gold.js';
+import { publishPrices } from './publishers/goldUpdatePublisher.js';
+import { setupSocketSubscriber } from './subscribers/socketSubscriber.js';
 
 const port = 8080;
 
@@ -25,11 +25,13 @@ const server = http.createServer(app);
 initSocket(server);
 
 app.use(bodyParser.json());
+app.use('/gold', gold);
 
-app.use('/gold-types', goldTypes);
-app.use('/gold-values', goldValues);
+setupSocketSubscriber();
 
 checkDatabaseConnection();
+
+setInterval(publishPrices, 5000);
 
 server.listen(port, () => {
   console.log(`Server is listening on http://localhost:${port}`);

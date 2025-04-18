@@ -1,56 +1,50 @@
-// Get elements by ID
-const dayInput = document.querySelector('#day');
-const getGoldValuesButton = document.querySelector('#get-gold-values-button');
-const goldTableBody = document.querySelector('#gold-table-body');
-
-// Set up WebSocket connection
+// Kết nối Socket.IO với server
 const socket = io("http://localhost:8080");
 
-// Fetch and display gold values based on the day
-async function showGoldValues() {
-    const day = dayInput.value;
+const makeSafeId = (name) => {
+  return name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]/g, '');
+};
 
-    if (!day) {
-        alert('Please enter a day!');
-        return;
-    }
+// Hàm để lấy tất cả giá vàng từ server
+const fetchGoldPrices = async () => {
+  try {
+    const response = await fetch('http://localhost:8080/gold');
+    const data = await response.json();
+    
+    // Hiển thị tất cả giá vàng ban đầu
+    data.forEach(gold => {
+      console.log('Processing gold:', gold);
+      displayGoldPrice(gold);
+    });    
+  } catch (error) {
+    console.error('Error fetching gold prices:', error);
+  }
+};
 
-    try {
-        console.log('Fetching for day:', day);
+const displayGoldPrice = (gold) => {
+  const safeId = makeSafeId(gold.name);
+  let priceElement = document.querySelector(`#price-${safeId}`);
 
-        const response = await fetch(`/gold-values?day=${day}`);
+  // Nếu không tìm thấy giá vàng trong UI, tạo mới
+  if (!priceElement) {
+    priceElement = document.createElement('div');
+    priceElement.id = `price-${safeId}`;
+    priceElement.classList.add('price-item');
+    document.getElementById('priceList').appendChild(priceElement);
+  }
 
-        if (!response.ok) {
-            throw new Error('Failed to fetch gold values');
-        }
+  // Cập nhật giá vàng
+  priceElement.innerHTML = `${gold.name}: ${gold.price.toLocaleString()} VND`;
+};
 
-        const data = await response.json();
-        goldTableBody.innerHTML = '';
 
-        data.forEach(item => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${item.updated_at}</td>
-                <td>${item.gold_type_name}</td>
-                <td>${item.buy_value}</td>
-                <td>${item.sell_value}</td>
-            `;
-            goldTableBody.appendChild(row);
-        });
-    } catch (error) {
-        console.error('Error fetching gold values', error);
-    }
-}
+// Fetch tất cả giá vàng ban đầu khi load trang
+fetchGoldPrices();
 
-// Listen for gold value updates from the server
-socket.on("gold_value_updated", (data) => {
-    console.log('Gold value updated:', data);
-    alert('Gold value has been updated!');
-    showGoldValues(); // Refresh the data when updated via WebSocket
+// Lắng nghe sự kiện 'gold-price-updated' từ server và cập nhật UI
+socket.on('gold-price-changed', (data) => {
+  console.log('Received gold price changed:', data);
+  fetchGoldPrices();
 });
 
-// Event listeners
-getGoldValuesButton.addEventListener('click', () => {
-  console.log('Button clicked!'); // Thêm dòng này để test
-  showGoldValues();
-});
+

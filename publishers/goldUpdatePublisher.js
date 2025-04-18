@@ -26,18 +26,21 @@ function randomizePrice(base) {
 }
 
 export function publishPrices() {
-  regions.forEach(name => {
-    const newPrice = randomizePrice(currentPrices[name]);
-    currentPrices[name] = newPrice;
+  // Chọn một vùng ngẫu nhiên từ danh sách
+  const randomRegion = regions[Math.floor(Math.random() * regions.length)];
 
-    const priceData = { name, price: newPrice };
+  // Tính giá vàng ngẫu nhiên cho vùng được chọn
+  const newPrice = randomizePrice(currentPrices[randomRegion]);
+  currentPrices[randomRegion] = newPrice;
 
-    // Gửi từng giá vàng tới Redis
-    publisher.publish("gold-price", JSON.stringify(priceData));
-  });
+  const priceData = { name: randomRegion, price: newPrice };
 
-  console.log("Published simulated gold prices!");
+  // Gửi giá vàng ngẫu nhiên tới Redis
+  publisher.publish("gold-price", JSON.stringify(priceData));
+
+  console.log("Published simulated gold price for:", randomRegion);
 }
+
 
 
 

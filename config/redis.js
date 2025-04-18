@@ -1,9 +1,12 @@
+// redis.js
 import { createClient } from 'redis';
 
 const publisher = createClient();
-const subscriber = createClient();
+const dbSubscriber = createClient();
+const socketSubscriber = createClient();
 
 await publisher.connect();
-await subscriber.connect();
+await dbSubscriber.connect();
+await socketSubscriber.connect();
 
-export { publisher, subscriber };
+export { publisher, dbSubscriber, socketSubscriber };

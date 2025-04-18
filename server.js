@@ -8,6 +8,7 @@ import { initSocket } from './config/socket.js';
 import {fileURLToPath} from 'url';
 import gold from './routes/gold.js';
 import { publishPrices } from './publishers/goldUpdatePublisher.js';
+import { setupDbSubscriber } from './subscribers/dbSubscriber.js';
 import { setupSocketSubscriber } from './subscribers/socketSubscriber.js';
 
 const port = 8080;
@@ -27,6 +28,7 @@ initSocket(server);
 app.use(bodyParser.json());
 app.use('/gold', gold);
 
+setupDbSubscriber();
 setupSocketSubscriber();
 
 checkDatabaseConnection();

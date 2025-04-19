@@ -2,16 +2,21 @@
   "name": "gold-tracker",
   "version": "1.0.0",
   "description": "",
-  "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "node server",
-    "dev": "node --watch server"
+    "start": "pm2 start ecosystem.config.cjs",
+    "stop": "pm2 stop ecosystem.config.cjs",
+    "restart": "pm2 restart ecosystem.config.cjs",
+    "delete": "pm2 delete all",
+    "logs": "pm2 logs",
+    "dev": "node --watch server",
+    "refresh": "pm2 stop all && pm2 delete all && pm2 start ecosystem.config.cjs"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "dotenv": "^16.5.0",
     "express": "^5.1.0",
     "gold-tracker": "file:",
     "mysql2": "^3.14.0",

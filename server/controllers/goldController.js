@@ -1,6 +1,4 @@
-import GoldPrice from '../models/GoldPrice.js';
-import { getIO } from '../config/socket.js';
-
+import GoldPrice from '../../models/GoldPrice.js';
 
 // GET all gold prices
 export const getAllGoldPrices = async (req, res) => {

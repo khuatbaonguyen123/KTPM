@@ -1,0 +1,36 @@
+gold-tracker/
+│
+├── config/                   
+│   ├── database.js          # Sequelize setup
+│   ├── redis.js             # Redis pub/sub client
+│   └── socket.js            # Singleton khởi tạo Socket.IO
+│
+├── models/                  
+│   └── GoldPrice.js         # Sequelize model cho giá vàng
+│
+├── server/                  
+│   ├── controllers/         # Xử lý logic API
+│   ├── routes/              # Khai báo các route
+│   ├── public/              # Frontend đơn giản
+│   │   ├── view.html
+│   │   └── main.js
+│   └── index.js             # Entry point của backend (server)
+│
+├── publishers/
+│   └── goldUpdatePublisher/
+│       ├── index.js         # Start publisher
+│       └── handler.js       # Logic publish giá vàng mới
+│
+├── subscribers/
+│   ├── dbSubscriber/
+│   │   ├── index.js         # Start dbSubscriber
+│   │   └── handler.js       # Gọi API upsert vào DB
+│   │
+│   └── socketSubscriber/
+│       ├── index.js         # Start socketSubscriber
+│       └── handler.js       # Emit socket đến UI
+│
+├── ecosystem.config.js      # PM2 config
+├── .env                     # Biến môi trường
+├── package.json
+└── README.md                # Optional

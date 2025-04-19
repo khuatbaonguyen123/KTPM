@@ -1,4 +1,4 @@
-import { publisher } from "../config/redis.js";
+import { publisher } from "../../config/redis.js";
 
 const regions = [
   'SJC Hồ Chí Minh', 'SJC Hà Nội', 'SJC Đà Nẵng',

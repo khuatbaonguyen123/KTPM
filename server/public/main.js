@@ -1,5 +1,5 @@
 // Kết nối Socket.IO với server
-const socket = io("http://localhost:8080");
+const socket = io("http://localhost:4000");
 
 const makeSafeId = (name) => {
   return name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w\-]/g, '');
@@ -8,7 +8,7 @@ const makeSafeId = (name) => {
 // Hàm để lấy tất cả giá vàng từ server
 const fetchGoldPrices = async () => {
   try {
-    const response = await fetch('http://localhost:8080/gold');
+    const response = await fetch('http://localhost:3000/gold');
     const data = await response.json();
     
     // Hiển thị tất cả giá vàng ban đầu
@@ -42,9 +42,9 @@ const displayGoldPrice = (gold) => {
 fetchGoldPrices();
 
 // Lắng nghe sự kiện 'gold-price-updated' từ server và cập nhật UI
-socket.on('gold-price-changed', (data) => {
-  console.log('Received gold price changed:', data);
-  fetchGoldPrices();
+socket.on('gold-price-changed', (goldData) => {
+  console.log('Received gold price changed:', goldData);
+  displayGoldPrice(goldData);
 });
 
 

@@ -1,5 +1,5 @@
-import { socketSubscriber } from '../config/redis.js';
-import { getIO } from '../config/socket.js';
+import { socketSubscriber } from '../../config/redis.js';
+import { getIO } from '../../config/socket.js';
 
 export const setupSocketSubscriber = async () => {
   try {

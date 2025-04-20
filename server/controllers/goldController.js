@@ -1,11 +1,9 @@
-import GoldPrice from '../models/GoldPrice.js';
-import { getIO } from '../config/socket.js';
-
+import GoldPrice from '../../models/GoldPrice.js';
 
 // GET all gold prices
 export const getAllGoldPrices = async (req, res) => {
   try {
-    const goldPrices = await GoldPrice.findAll({ order: [['updated_at', 'DESC']] });
+    const goldPrices = await GoldPrice.findAll();
     res.json(goldPrices);
   } catch (error) {
     res.status(500).json({ message: 'Lỗi khi lấy dữ liệu giá vàng', error });
@@ -23,8 +21,7 @@ export const upsertGoldPrice = async (req, res) => {
   try {
     const [record, created] = await GoldPrice.upsert({
       name,
-      price,
-      updated_at: new Date()
+      price
     });
 
     res.status(created ? 201 : 200).json({

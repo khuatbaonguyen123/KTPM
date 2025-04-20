@@ -16,11 +16,6 @@ const GoldPrice = sequelize.define('GoldPrice', {
     type: DataTypes.DECIMAL(10, 2),
     allowNull: false,
   },
-  updated_at: {
-    type: DataTypes.DATE,
-    allowNull: false,
-    defaultValue: sequelize.literal('CURRENT_TIMESTAMP'),
-  },
 }, {
   tableName: 'gold_price',
   timestamps: false,

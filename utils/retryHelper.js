@@ -9,12 +9,12 @@ export async function fetchWithRetry(fn, options = {}) {
       } catch (error) {
         const status = error?.response?.status;
 
-        // ❌ Dừng retry nếu là lỗi client-side không thể phục hồi
+        // Dừng retry nếu là lỗi client-side không thể phục hồi
         if (status && status < 500 && status !== 429) {
           bail(error);
         }
 
-        // ⏳ Xử lý riêng rate limit
+        // Xử lý riêng rate limit
         if (status === 429) {
           await handleRateLimitError(error, attempt);
           throw error; // tiếp tục retry
@@ -35,7 +35,7 @@ export async function fetchWithRetry(fn, options = {}) {
 async function handleRateLimitError(error, attempt) {
   const retryAfterHeader = error.response?.headers['retry-after'];
   const waitTime = retryAfterHeader
-    ? parseFloat(retryAfterHeader) * 1000 // "Retry-After" thường là giây
+    ? parseFloat(retryAfterHeader) * 1000 
     : 30 * 1000; // fallback 30s nếu header không có
 
   console.warn(`[Retry ${attempt}] Rate limited. Waiting ${waitTime}ms before retrying...`);

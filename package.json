@@ -10,7 +10,7 @@
     "delete": "pm2 delete all",
     "logs": "pm2 logs",
     "dev": "node --watch server",
-    "flush": "pm2 flush"
+    "flush": "pm2 flush all"
   },
   "keywords": [],
   "author": "",

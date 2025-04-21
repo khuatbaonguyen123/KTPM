@@ -7,6 +7,7 @@ import 'dotenv/config';
 import { checkDatabaseConnection } from '../config/database.js';
 import { limiter } from './middleware/rateLimiter.js';
 import goldRoutes from './routes/gold.js';
+import healthRoute from './routes/health.js'
 
 const PORT = process.env.SERVER_PORT || 3000;
 
@@ -24,6 +25,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use(bodyParser.json());
 app.use(limiter);
 app.use('/gold', goldRoutes);
+app.use('/health', healthRoute);
 
 // DB
 checkDatabaseConnection();

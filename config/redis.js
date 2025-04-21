@@ -21,10 +21,12 @@ const publisher = createRedisClient('publisher');
 const dbSubscriber = createRedisClient('dbSubscriber');
 const socketSubscriber = createRedisClient('socketSubscriber');
 const rateLimiter = createRedisClient('rateLimiter');
+const deadLetterClient = createRedisClient('deadLetter');
 
 await publisher.connect();
 await dbSubscriber.connect();
 await socketSubscriber.connect();
 await rateLimiter.connect(); 
+await deadLetterClient.connect();
 
-export { publisher, dbSubscriber, socketSubscriber, rateLimiter };
+export { publisher, dbSubscriber, socketSubscriber, rateLimiter, deadLetterClient };

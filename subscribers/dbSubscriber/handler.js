@@ -1,5 +1,7 @@
 import { dbSubscriber } from "../../config/redis.js";
 import { fetchWithRetry } from "../../utils/retryHelper.js";
+import { deadLetterClient } from "../../config/redis.js";
+import 'dotenv/config';
 
 // In-memory message queue
 const queue = [];
@@ -34,9 +36,12 @@ const processQueue = async () => {
   const goldData = queue.shift();
   const { retryCount, createdAt } = goldData;
 
-  // Bỏ qua nếu quá số lần hoặc hết hạn
+  // Put into dead letter queue if exceed max retries count
   if (retryCount >= MAX_RETRIES || Date.now() - createdAt > MAX_LIFETIME) {
-    console.warn("Dropping message - exceeded retry/time:", goldData);
+    console.warn("Pushing to dead letter queue:", goldData);
+  
+    await deadLetterClient.rPush("dead_letter_queue", JSON.stringify(goldData));
+    
     isProcessing = false;
     setImmediate(processQueue);
     return;

@@ -15,6 +15,10 @@ module.exports = {
       {
         name: "socket-subscriber",
         script: "./subscribers/socketSubscriber/index.js",
+      },
+      {
+        name: "dead-letter-processor",
+        script: "./deadLetterProcessor/index.js",
       }
     ]
   };

@@ -3,6 +3,8 @@ import { deadLetterClient } from "../config/redis.js";
 const API_ENDPOINT = "http://localhost:3000/gold";
 const DEAD_LETTER_QUEUE = "dead_letter_queue";
 
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
+
 // Hàm kiểm tra trạng thái server
 const checkServerHealth = async () => {
   try {
@@ -14,7 +16,7 @@ const checkServerHealth = async () => {
   }
 };
 
-// Hàm retry các message từ Dead Letter Queue
+// Hàm retry từng message từ Dead Letter Queue
 const retryDeadLetter = async () => {
   const healthy = await checkServerHealth();
   if (!healthy) {
@@ -23,6 +25,8 @@ const retryDeadLetter = async () => {
   }
 
   const length = await deadLetterClient.lLen(DEAD_LETTER_QUEUE);
+  console.log(`[DeadLetter] Processing ${length} messages...`);
+
   for (let i = 0; i < length; i++) {
     const message = await deadLetterClient.lPop(DEAD_LETTER_QUEUE);
     if (!message) continue;
@@ -40,8 +44,13 @@ const retryDeadLetter = async () => {
       console.log("[DeadLetter] Retried successfully:", goldData);
     } catch (err) {
       console.warn("[DeadLetter] Retry failed. Requeuing...", err.message);
-      await deadLetterClient.rPush(DEAD_LETTER_QUEUE, message);  // Re-add to dead letter queue
+      await deadLetterClient.rPush(DEAD_LETTER_QUEUE, message);
     }
+
+    // 💡 Delay giữa mỗi message
+    const baseDelay = 3000; // 3s
+    const jitter = Math.floor(Math.random() * 1000); // 0-1s
+    await delay(baseDelay + jitter);
   }
 };
 
@@ -49,7 +58,7 @@ const retryDeadLetter = async () => {
 export const startRetryLoop = () => {
   const loop = async () => {
     await retryDeadLetter();
-    const interval = 1 * 60 * 1000;
+    const interval = 2 * 60 * 1000;
     setTimeout(loop, interval);
   };
 

@@ -5,7 +5,7 @@ import { rateLimiter as redisClient } from '../../config/redis.js';
 const rateLimiterFlex = new RateLimiterRedis({
   storeClient: redisClient,
   keyPrefix: 'rateLimiter',
-  points: 5,
+  points: 10,
   duration: 30,
 });
 

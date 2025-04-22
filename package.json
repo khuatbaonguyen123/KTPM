@@ -10,7 +10,9 @@
     "delete": "pm2 delete all",
     "logs": "pm2 logs",
     "dev": "node --watch server",
-    "flush": "pm2 flush all"
+    "flush": "pm2 flush",
+    "test:stress": "artillery run test/stressTest.yml",
+    "test:stress:report": "artillery run --output result.json test/stressTest.yml && artillery report --output report.html result.json"
   },
   "keywords": [],
   "author": "",

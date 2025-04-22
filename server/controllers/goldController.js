@@ -32,3 +32,21 @@ export const upsertGoldPrice = async (req, res) => {
     res.status(500).json({ message: 'Lỗi khi upsert giá vàng', error });
   }
 };
+
+// GET gold price by ID
+export const getGoldPriceById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const goldPrice = await GoldPrice.findByPk(id);
+
+    if (!goldPrice) {
+      return res.status(404).json({ message: 'Không tìm thấy giá vàng với ID đã cho' });
+    }
+
+    res.json(goldPrice);
+  } catch (error) {
+    res.status(500).json({ message: 'Lỗi khi lấy giá vàng theo ID', error });
+  }
+};
+
